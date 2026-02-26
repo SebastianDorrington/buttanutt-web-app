@@ -1,0 +1,16 @@
+[Unit]
+Description=Production reporting web app
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/web_app
+ExecStart=/usr/bin/env node server.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target
