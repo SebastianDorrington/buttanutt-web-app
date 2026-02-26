@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh; padding: 1rem; background: #fff; color: #000; }
+    header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .logo { height: 36px; width: auto; display: block; }
+    header a { color: #000; text-decoration: none; }
+    header a:hover { color: #333; text-decoration: underline; }
+    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #ddd; }
+    .tabs a { padding: 0.75rem 1rem; color: #666; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tabs a:hover { color: #000; background: #f5f5f5; }
+    .tabs a.active { color: #000; border-bottom-color: #000; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .card {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 { margin: 0 0 1rem; font-size: 1rem; color: #333; }
+    label { display: block; margin-bottom: 0.35rem; font-size: 0.875rem; color: #333; }
+    input, select, textarea {
+      width: 100%;
+      max-width: 20rem;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f0f0f0;
+      color: #222;
+      font-size: 1rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #999; }
+    textarea { min-height: 4rem; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: #666; }
+    select option { background: #fff; color: #222; }
+    button {
+      padding: 0.5rem 0.75rem;
+      border: none;
+      border-radius: 6px;
+      background: #fff;
+      color: #000;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    button:hover { background: #e0e0e0; }
+    button.secondary { background: #333; color: #fff; }
+    button.danger { background: #333; color: #fff; }
+    button.danger:hover { background: #444; }
+    .msg { margin-top: 0.5rem; font-size: 0.875rem; }
+    .msg.success { color: #aaa; }
+    .msg.error { color: #c00; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid #ddd; }
+    th { color: #333; font-weight: 500; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; padding: 1rem; }
+    .modal.show { display: flex; }
+    .modal-inner { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; max-width: 24rem; width: 100%; color: #000; }
+    .modal h3 { margin: 0 0 1rem; }
+    .modal-actions { margin-top: 1rem; }
+    .summary-manager { margin-bottom: 1rem; }
+    .summary-manager select { max-width: 16rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/admin.html"><img src="/logo.png" alt="Logo" class="logo" onerror="this.style.display='none'"></a>
+    <nav class="tabs">
+      <a href="#" class="tab-link active" data-tab="permissions">Permissions</a>
+      <a href="#" class="tab-link" data-tab="summary">Summary</a>
+    </nav>
+    <a href="/logout" style="margin-left:auto;">Sign out</a>
+  </header>
+
+  <div id="permissions" class="tab-pane active">
+    <div class="card">
+      <h2>Users</h2>
+      <table>
+        <thead><tr><th>Username</th><th>Role</th><th>Name</th><th>Actions</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+      <p id="usersMsg" class="msg"></p>
+      <h3 style="margin-top:1rem; font-size:0.95rem;">Add user</h3>
+      <form id="addUserForm">
+        <label>Username</label>
+        <input type="text" name="username" required placeholder="e.g. janedoe">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="e.g. ••••••••">
+        <label>Role</label>
+        <select name="role">
+          <option value="production_manager">Production manager</option>
+          <option value="admin">Admin</option>
+        </select>
+        <label>First name</label>
+        <input type="text" name="first_name" placeholder="e.g. Jane">
+        <label>Last name</label>
+        <input type="text" name="last_name" placeholder="e.g. Doe">
+        <button type="submit">Add user</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Variants</h2>
+      <p style="font-size:0.9rem; color:#888; margin-bottom:0.75rem;">Add, edit or remove variants. Managers see only variants you allow (under Manager access).</p>
+      <table>
+        <thead><tr><th>Name</th><th>Actions</th></tr></thead>
+        <tbody id="variantsBody"></tbody>
+      </table>
+      <form id="addVariantForm" style="margin-top:1rem;">
+        <input type="text" name="name" placeholder="e.g. 1L milk" required>
+        <button type="submit">Add variant</button>
+      </form>
+      <p id="variantsMsg" class="msg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Manager variant access</h2>
+      <p style="font-size:0.9rem; color:#888; margin-bottom:0.75rem;">Choose which variants each production manager can see. Default: all. Deselect to restrict.</p>
+      <label>Production manager</label>
+      <select id="mvaUser">
+        <option value="">Select manager…</option>
+      </select>
+      <div id="mvaCheckboxes"></div>
+      <button type="button" id="mvaSave">Save access</button>
+      <p id="mvaMsg" class="msg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Export data</h2>
+      <p style="font-size:0.9rem; color:#888; margin-bottom:0.75rem;">Download CSV of all targets and daily production.</p>
+      <a href="/api/export/targets" download="weekly_targets.csv"><button type="button">Export weekly targets (CSV)</button></a>
+      <a href="/api/export/daily" download="daily_production.csv"><button type="button">Export daily production (CSV)</button></a>
+    </div>
+  </div>
+
+  <div id="summary" class="tab-pane">
+    <div class="card summary-manager">
+      <h2>Summary by manager</h2>
+      <label>Select manager</label>
+      <select id="summaryUserId">
+        <option value="">Select manager…</option>
+      </select>
+    </div>
+    <div class="card">
+      <h2>Target vs production by week (table)</h2>
+      <table>
+        <thead><tr><th>Week</th><th>Variant</th><th>Target</th><th>Produced</th><th>% of target</th></tr></thead>
+        <tbody id="summaryTableBody"></tbody>
+      </table>
+      <p id="summaryTableEmpty" class="msg" style="color:#666;">Select a manager.</p>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-inner">
+      <h3>Edit user</h3>
+      <input type="hidden" id="editId">
+      <label>Username (read-only)</label>
+      <input type="text" id="editUsername" disabled>
+      <label>First name</label>
+      <input type="text" id="editFirstName" placeholder="e.g. John">
+      <label>Last name</label>
+      <input type="text" id="editLastName" placeholder="e.g. Doe">
+      <label>Personal note (admin only)</label>
+      <textarea id="editNote" placeholder="e.g. Notes about this user"></textarea>
+      <label>New password (leave blank to keep)</label>
+      <input type="password" id="editPassword" placeholder="Leave blank to keep current">
+      <div class="modal-actions">
+        <button type="button" id="editSaveBtn">Save</button>
+        <button type="button" class="secondary" id="editCancelBtn">Cancel</button>
+      </div>
+      <p id="editMsg" class="msg"></p>
+    </div>
+  </div>
+
+  <div id="editVariantModal" class="modal">
+    <div class="modal-inner">
+      <h3>Edit variant</h3>
+      <input type="hidden" id="evId">
+      <label>Name</label>
+      <input type="text" id="evName" placeholder="e.g. 1L milk">
+      <div class="modal-actions">
+        <button type="button" id="evSaveBtn">Save</button>
+        <button type="button" class="secondary" id="evCancelBtn">Cancel</button>
+      </div>
+      <p id="evMsg" class="msg"></p>
+    </div>
+  </div>
+
+  <script>
+    function msg(el, text, type) {
+      const p = document.getElementById(el);
+      if (!p) return;
+      p.textContent = text;
+      p.className = 'msg ' + (type || 'success');
+      if (type !== 'error') setTimeout(() => { p.textContent = ''; }, 4000);
+    }
+
+    async function api(method, url, body) {
+      const opt = { method, headers: {} };
+      if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+      const r = await fetch(url, opt);
+      const data = r.ok ? await r.json().catch(() => ({})) : await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    function toDDMMYYYY(iso) {
+      if (!iso || iso.length < 10) return '';
+      const [y, m, d] = iso.slice(0, 10).split('-');
+      return d + '/' + m + '/' + y;
+    }
+
+    document.querySelectorAll('.tab-link').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.tab-link').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+        document.getElementById(a.dataset.tab).classList.add('active');
+      });
+    });
+
+    let allVariants = [];
+    async function loadVariants() {
+      allVariants = await api('GET', '/api/admin/variants');
+      const tbody = document.getElementById('variantsBody');
+      tbody.innerHTML = allVariants.map(v =>
+        `<tr><td>${v.name}</td><td><button type="button" class="edit-variant" data-id="${v.id}" data-name="${v.name.replace(/"/g, '&quot;')}">Edit</button> <button type="button" class="danger delete-variant" data-id="${v.id}">Remove</button></td></tr>`
+      ).join('');
+      tbody.querySelectorAll('.edit-variant').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('evId').value = btn.dataset.id;
+          document.getElementById('evName').value = btn.dataset.name;
+          document.getElementById('evMsg').textContent = '';
+          document.getElementById('editVariantModal').classList.add('show');
+        });
+      });
+      tbody.querySelectorAll('.delete-variant').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Remove this variant?')) return;
+          try {
+            await api('DELETE', '/api/admin/variants/' + btn.dataset.id);
+            loadVariants();
+            loadMvaManagers();
+          } catch (err) {
+            msg('variantsMsg', err.message, 'error');
+          }
+        });
+      });
+    }
+
+    document.getElementById('addVariantForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = e.target.querySelector('input[name=name]').value.trim();
+      try {
+        await api('POST', '/api/admin/variants', { name });
+        msg('variantsMsg', 'Variant added.');
+        e.target.reset();
+        loadVariants();
+      } catch (err) {
+        msg('variantsMsg', err.message, 'error');
+      }
+    });
+
+    document.getElementById('evSaveBtn').addEventListener('click', async () => {
+      const id = document.getElementById('evId').value;
+      const name = document.getElementById('evName').value.trim();
+      try {
+        await api('PATCH', '/api/admin/variants/' + id, { name });
+        document.getElementById('editVariantModal').classList.remove('show');
+        loadVariants();
+      } catch (err) {
+        msg('evMsg', err.message, 'error');
+      }
+    });
+    document.getElementById('evCancelBtn').addEventListener('click', () => document.getElementById('editVariantModal').classList.remove('show'));
+
+    async function loadUsers() {
+      const users = await api('GET', '/api/users');
+      const tbody = document.getElementById('usersBody');
+      tbody.innerHTML = users.map(u => {
+        const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
+        const delBtn = u.role === 'admin' && users.filter(x => x.role === 'admin').length <= 1 ? '' : `<button type="button" class="danger delete-user" data-id="${u.id}">Remove</button>`;
+        return `<tr><td>${u.username}</td><td>${u.role}</td><td>${name}</td><td><button type="button" class="edit-user" data-id="${u.id}">Edit</button> ${delBtn}</td></tr>`;
+      }).join('');
+      tbody.querySelectorAll('.edit-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            const u = await api('GET', '/api/users/' + btn.dataset.id);
+            document.getElementById('editId').value = u.id;
+            document.getElementById('editUsername').value = u.username;
+            document.getElementById('editFirstName').value = u.first_name || '';
+            document.getElementById('editLastName').value = u.last_name || '';
+            document.getElementById('editNote').value = u.note || '';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editMsg').textContent = '';
+            document.getElementById('editModal').classList.add('show');
+          } catch (err) {
+            msg('usersMsg', err.message, 'error');
+          }
+        });
+      });
+      tbody.querySelectorAll('.delete-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Remove this user?')) return;
+          try {
+            await api('DELETE', '/api/users/' + btn.dataset.id);
+            loadUsers();
+            loadMvaManagers();
+            loadSummaryManagers();
+          } catch (err) {
+            msg('usersMsg', err.message, 'error');
+          }
+        });
+      });
+      loadSummaryManagers();
+    }
+
+    document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api('POST', '/api/users', {
+          username: fd.get('username').trim(),
+          password: fd.get('password'),
+          role: fd.get('role'),
+          first_name: fd.get('first_name').trim(),
+          last_name: fd.get('last_name').trim()
+        });
+        msg('usersMsg', 'User added.');
+        e.target.reset();
+        loadUsers();
+      } catch (err) {
+        msg('usersMsg', err.message, 'error');
+      }
+    });
+
+    document.getElementById('editSaveBtn').addEventListener('click', async () => {
+      const id = document.getElementById('editId').value;
+      const body = {
+        first_name: document.getElementById('editFirstName').value.trim(),
+        last_name: document.getElementById('editLastName').value.trim(),
+        note: document.getElementById('editNote').value.trim()
+      };
+      const pw = document.getElementById('editPassword').value;
+      if (pw) body.password = pw;
+      try {
+        await api('PATCH', '/api/users/' + id, body);
+        document.getElementById('editModal').classList.remove('show');
+        loadUsers();
+      } catch (err) {
+        msg('editMsg', err.message, 'error');
+      }
+    });
+    document.getElementById('editCancelBtn').addEventListener('click', () => document.getElementById('editModal').classList.remove('show'));
+
+    function loadMvaManagers() {
+      api('GET', '/api/users').then(users => {
+        const managers = users.filter(u => u.role === 'production_manager');
+        const sel = document.getElementById('mvaUser');
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Select manager…</option>' + managers.map(m => `<option value="${m.id}">${m.username} (${[m.first_name, m.last_name].filter(Boolean).join(' ') || '—'})</option>`).join('');
+        if (current) sel.value = current;
+        sel.dispatchEvent(new Event('change'));
+      });
+    }
+
+    document.getElementById('mvaUser').addEventListener('change', async () => {
+      const userId = document.getElementById('mvaUser').value;
+      const box = document.getElementById('mvaCheckboxes');
+      if (!userId) { box.innerHTML = ''; return; }
+      const [allowed, variants] = await Promise.all([
+        api('GET', '/api/admin/manager-variant-access/' + userId),
+        api('GET', '/api/admin/variants')
+      ]);
+      const allowedSet = new Set(allowed);
+      box.innerHTML = variants.map(v => `
+        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+          <input type="checkbox" class="mva-cb" value="${v.id}" ${allowedSet.size === 0 || allowedSet.has(v.id) ? 'checked' : ''}>
+          ${v.name}
+        </label>
+      `).join('');
+    });
+
+    document.getElementById('mvaSave').addEventListener('click', async () => {
+      const userId = document.getElementById('mvaUser').value;
+      if (!userId) { msg('mvaMsg', 'Select a manager first.', 'error'); return; }
+      const allIds = Array.from(document.querySelectorAll('.mva-cb')).map(c => c.value);
+      const checked = Array.from(document.querySelectorAll('.mva-cb:checked')).map(c => c.value);
+      const payload = checked.length === allIds.length ? [] : checked;
+      try {
+        await api('PUT', '/api/admin/manager-variant-access/' + userId, payload);
+        msg('mvaMsg', 'Access saved. All checked = manager sees all variants.');
+      } catch (err) {
+        msg('mvaMsg', err.message, 'error');
+      }
+    });
+
+    function loadSummaryManagers() {
+      api('GET', '/api/users').then(users => {
+        const managers = users.filter(u => u.role === 'production_manager');
+        const sel = document.getElementById('summaryUserId');
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Select manager…</option>' + managers.map(m => `<option value="${m.id}">${m.username} (${[m.first_name, m.last_name].filter(Boolean).join(' ') || '—'})</option>`).join('');
+        if (current) sel.value = current;
+        sel.dispatchEvent(new Event('change'));
+      });
+    }
+
+    document.getElementById('summaryUserId').addEventListener('change', async () => {
+      const userId = document.getElementById('summaryUserId').value;
+      const tbody = document.getElementById('summaryTableBody');
+      const tableEmpty = document.getElementById('summaryTableEmpty');
+      if (!userId) {
+        tbody.innerHTML = '';
+        tableEmpty.hidden = false;
+        return;
+      }
+      const list = await api('GET', '/api/admin/summary/' + userId);
+      if (!list.length) {
+        tbody.innerHTML = '';
+        tableEmpty.textContent = 'No data for this manager.';
+        tableEmpty.hidden = false;
+        return;
+      }
+      tableEmpty.hidden = true;
+      tbody.innerHTML = list.map(row => `
+        <tr>
+          <td>${toDDMMYYYY(row.week_start_date)}</td>
+          <td>${row.variant_name}</td>
+          <td>${row.target}</td>
+          <td>${row.produced}</td>
+          <td>${row.pct}%</td>
+        </tr>
+      `).join('');
+    });
+
+    loadUsers();
+    loadVariants();
+    loadMvaManagers();
+  </script>
+</body>
+</html>
